@@ -1,18 +1,27 @@
-import * as sns from '@aws-cdk/aws-sns';
-import * as subs from '@aws-cdk/aws-sns-subscriptions';
-import * as sqs from '@aws-cdk/aws-sqs';
 import * as cdk from '@aws-cdk/core';
+import * as ec2 from '@aws-cdk/aws-ec2';
+import * as ecs from '@aws-cdk/aws-ecs';
+import * as ecs_patterns from '@aws-cdk/aws-ecs-patterns';
 
 export class DemoCdkFargateStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    const queue = new sqs.Queue(this, 'DemoCdkFargateQueue', {
-      visibilityTimeout: cdk.Duration.seconds(300)
-    });
+    const vpc = new ec2.Vpc(this, "MyVpcCluster", {
+      maxAzs: 1,
+    })
 
-    const topic = new sns.Topic(this, 'DemoCdkFargateTopic');
+    const cluster = new ecs.Cluster(this, "MyCluster", {
+      vpc: vpc
+    })
 
-    topic.addSubscription(new subs.SqsSubscription(queue));
+    new ecs_patterns.ApplicationLoadBalancedFargateService(this, "MyFargateService", {
+      cluster: cluster,
+      cpu: 256,
+      desiredCount: 2,
+      taskImageOptions: {image: ecs.ContainerImage.fromAsset(path.resolve)},
+      memoryLimitMiB: 512,
+      publicLoadBalancer: true
+    })
   }
 }
